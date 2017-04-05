@@ -18,23 +18,7 @@ namespace Magenic.BadgeApplication.Processor
             {
                 try
                 {
-                    var adDal = IoC.Container.Resolve<IAuthorizeLogOn>();
-                    var dal = IoC.Container.Resolve<ICustomIdentityDAL>();
-
-                    var employees = adDal.RetrieveActiveUsers().AsQueryable();
-
-                    InsertEmployees(employees, adDal, dal);
-
-                    UploadPhotos(employees, adDal, dal);
-
-                    MarkTermDateForMissingEmployees(adDal, dal);
-
-                    SaveManagerInformation(employees, adDal, dal);
-
-                    foreach (var employeeADName in employees)
-                    {
-                        dal.SetManagerPermission(employeeADName);
-                    }
+	                adCycle();
                 }
                 catch (Exception ex)
                 {
@@ -46,6 +30,28 @@ namespace Magenic.BadgeApplication.Processor
                 }
             }
         }
+
+	    public void adCycle()
+	    {
+			var adDal = IoC.Container.Resolve<IAuthorizeLogOn>();
+			var dal = IoC.Container.Resolve<ICustomIdentityDAL>();
+
+			var employees = adDal.RetrieveActiveUsers().AsQueryable();
+
+			InsertEmployees(employees, adDal, dal);
+
+			UploadPhotos(adDal, dal);
+
+			MarkTermDateForMissingEmployees(adDal, dal);
+
+			SaveManagerInformation(employees, adDal, dal);
+
+			foreach (var employeeADName in employees)
+			{
+				dal.SetManagerPermission(employeeADName);
+			}
+		}
+
 
         private void MarkTermDateForMissingEmployees(IAuthorizeLogOn adDal, ICustomIdentityDAL dal)
         {
@@ -75,12 +81,19 @@ namespace Magenic.BadgeApplication.Processor
             }
         }
 
-        private void UploadPhotos(IEnumerable<string> employees, IAuthorizeLogOn adDal, ICustomIdentityDAL dal)
+        private void UploadPhotos(IAuthorizeLogOn adDal, ICustomIdentityDAL dal)
         {
             var allEmployeePhotos = adDal.RetrieveUsersAndPhotos();
             foreach (var kvp in allEmployeePhotos)
             {
-                dal.SaveEmployeePhoto(kvp.Value, kvp.Key);
+	            try
+	            {
+		            dal.SaveEmployeePhoto( kvp.Value, kvp.Key );
+	            }
+	            catch ( Exception ex )
+	            {
+		            break;
+	            }
             }
         }
 
