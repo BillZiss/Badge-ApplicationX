@@ -10,7 +10,7 @@ using System.Threading;
 
 namespace Magenic.BadgeApplication.Processor
 {
-    public class ADProcessor
+    public partial class ADProcessor
     {
         public void Start()
         {
@@ -26,35 +26,36 @@ namespace Magenic.BadgeApplication.Processor
                 }
                 finally
                 {
-                    Thread.Sleep(SleepInterval);
+                    Thread.Sleep(sleepInterval);
                 }
             }
         }
 
 	    public void adCycle()
 	    {
-			var adDal = IoC.Container.Resolve<IAuthorizeLogOn>();
-			var dal = IoC.Container.Resolve<ICustomIdentityDAL>();
+			IAuthorizeLogOn adDal = IoC.Container.Resolve<IAuthorizeLogOn>();
+			ICustomIdentityDAL dbDal = IoC.Container.Resolve<ICustomIdentityDAL>();
 
-			var employees = adDal.RetrieveActiveUsers().AsQueryable();
+			IQueryable<string> employees = adDal.RetrieveActiveUsers().AsQueryable();
 
-			InsertEmployees(employees, adDal, dal);
+			insertEmployees(employees, adDal, dbDal);
 
-			UploadPhotos(adDal, dal);
+			uploadPhotos(adDal, dbDal);
 
-			MarkTermDateForMissingEmployees(adDal, dal);
+			markTermDateForMissingEmployees(adDal, dbDal);
 
-			SaveManagerInformation(employees, adDal, dal);
+			saveManagerInformation(employees, adDal, dbDal);
 
-			foreach (var employeeADName in employees)
+			foreach (string employeeADName in employees)
 			{
-				dal.SetManagerPermission(employeeADName);
+				dbDal.SetManagerPermission(employeeADName);
 			}
 		}
 
 
-        private void MarkTermDateForMissingEmployees(IAuthorizeLogOn adDal, ICustomIdentityDAL dal)
+        private void markTermDateForMissingEmployees(IAuthorizeLogOn adDal, ICustomIdentityDAL dal)
         {
+			// ZISS: this code should be replaced by property injection.0
             var userCollectionDal = IoC.Container.Resolve<IUserCollectionDAL>();
             var userCollection = userCollectionDal.GetActiveAdUsers();
 
@@ -67,12 +68,12 @@ namespace Magenic.BadgeApplication.Processor
             }
         }
 
-        private int SleepInterval
+        private int sleepInterval
         {
             get { return int.Parse(ConfigurationManager.AppSettings["SleepIntervalInMilliseconds"]); }
         }
 
-        private static void SaveManagerInformation(IEnumerable<string> employees, IAuthorizeLogOn adDal, ICustomIdentityDAL dal)
+        private static void saveManagerInformation(IEnumerable<string> employees, IAuthorizeLogOn adDal, ICustomIdentityDAL dal)
         {
             foreach (var employeeADName in employees)
             {
@@ -81,7 +82,7 @@ namespace Magenic.BadgeApplication.Processor
             }
         }
 
-        private void UploadPhotos(IAuthorizeLogOn adDal, ICustomIdentityDAL dal)
+        private void uploadPhotos(IAuthorizeLogOn adDal, ICustomIdentityDAL dal)
         {
             var allEmployeePhotos = adDal.RetrieveUsersAndPhotos();
             foreach (var kvp in allEmployeePhotos)
@@ -97,15 +98,15 @@ namespace Magenic.BadgeApplication.Processor
             }
         }
 
-        private void InsertEmployees(IEnumerable<string> employees, IAuthorizeLogOn adDal, ICustomIdentityDAL dal)
+        private void insertEmployees(IEnumerable<string> employees, IAuthorizeLogOn adDal, ICustomIdentityDAL dal)
         {
             foreach (var employeeADName in employees)
             {
-                InsertUserInfoFromAD(adDal, dal, employeeADName);
+                insertUserInfoFromAD(adDal, dal, employeeADName);
             }
         }
 
-        private void InsertUserInfoFromAD(IAuthorizeLogOn adDal, ICustomIdentityDAL dal, string userName)
+        private void insertUserInfoFromAD(IAuthorizeLogOn adDal, ICustomIdentityDAL dal, string userName)
         {
             var userADInfo = adDal.RetrieveUserInformation(userName);
             if (userADInfo != null)
